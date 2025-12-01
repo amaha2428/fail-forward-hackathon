@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   tomato-fresh:
-    image: ${DOCKERHUB_USERNAME}/tomato-fresh:${IMAGE_TAG}
+    image: amaha24/tomato-fresh:latest
     container_name: tomato-fresh-production
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - FLASK_ENV=production
     restart: unless-stopped
