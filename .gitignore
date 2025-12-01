@@ -1,0 +1,4 @@
+.env
+.qodo
+# Environment variables for the Flask application
+FLASK_ENV=production
