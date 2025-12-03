@@ -24,16 +24,109 @@ CORS(
 
 
 # Scoring logic based on classification
+# def get_freshness_details(class_name, confidence):
+#     """
+#     Convert class prediction into detailed freshness information
+#     """
+#     class_name = class_name.strip().lower()
+    
+#     # Define scoring rules
+#     scoring_map = {
+#         'ripe': {
+#             'score': 95,
+#             'shelf_life': '5-7 days',
+#             'action': 'Premium market ready - excellent for immediate sale',
+#             'pricing': 'Full market price (₦15,000-₦18,000/basket)',
+#             'urgency': 'low',
+#             'cooling_needed': False
+#         },
+#         'unripe': {
+#             'score': 70,
+#             'shelf_life': '3-4 days until peak ripeness',
+#             'action': 'Good for market - will ripen soon',
+#             'pricing': 'Standard price (₦12,000-₦15,000/basket)',
+#             'urgency': 'medium',
+#             'cooling_needed': False
+#         },
+#         'old': {
+#             'score': 50,
+#             'shelf_life': '1-2 days maximum',
+#             'action': 'Sell immediately or move to cold storage',
+#             'pricing': 'Reduced price (₦8,000-₦10,000/basket)',
+#             'urgency': 'high',
+#             'cooling_needed': True
+#         },
+#         'damaged': {
+#             'score': 20,
+#             'shelf_life': 'Process today',
+#             'action': 'Not suitable for fresh sale - process into paste/sauce',
+#             'pricing': 'Processing price only (₦3,000-₦5,000/basket)',
+#             'urgency': 'critical',
+#             'cooling_needed': True
+#         }
+#     }
+    
+#     # Default fallback if class not recognized
+#     if class_name not in scoring_map:
+#         return {
+#             'score': 50,
+#             'category': class_name.capitalize(),
+#             'confidence': float(confidence),
+#             'shelf_life': 'Unknown',
+#             'action': 'Manual inspection recommended',
+#             'pricing': 'Market rate varies',
+#             'urgency': 'medium',
+#             'cooling_needed': False
+#         }
+    
+#     details = scoring_map[class_name]
+    
+#     return {
+#         'score': details['score'],
+#         'category': class_name.capitalize(),
+#         'confidence': float(confidence),
+#         'shelf_life': details['shelf_life'],
+#         'action': details['action'],
+#         'pricing': details['pricing'],
+#         'urgency': details['urgency'],
+#         'cooling_needed': details['cooling_needed']
+#     }
 def get_freshness_details(class_name, confidence):
     """
     Convert class prediction into detailed freshness information
+    Score now incorporates confidence level for accuracy
     """
     class_name = class_name.strip().lower()
     
-    # Define scoring rules
-    scoring_map = {
+    # Base scores for each category
+    base_scores = {
+        'ripe': 95,
+        'unripe': 70,
+        'old': 50,
+        'damaged': 20
+    }
+    
+    # Get base score
+    base_score = base_scores.get(class_name, 50)
+    
+    # Adjust score based on confidence
+    # If confidence is low, reduce the score proportionally
+    confidence_multiplier = confidence / 100.0
+    
+    # Final score = base_score * confidence factor
+    # But maintain minimum threshold (don't go below certain limits)
+    if confidence >= 0.85:  # High confidence
+        final_score = base_score
+    elif confidence >= 0.70:  # Medium confidence
+        final_score = int(base_score * 0.9)  # Reduce by 10%
+    elif confidence >= 0.50:  # Low confidence
+        final_score = int(base_score * 0.75)  # Reduce by 25%
+    else:  # Very low confidence
+        final_score = int(base_score * 0.60)  # Reduce by 40%
+    
+    # Define category details
+    category_details = {
         'ripe': {
-            'score': 95,
             'shelf_life': '5-7 days',
             'action': 'Premium market ready - excellent for immediate sale',
             'pricing': 'Full market price (₦15,000-₦18,000/basket)',
@@ -41,7 +134,6 @@ def get_freshness_details(class_name, confidence):
             'cooling_needed': False
         },
         'unripe': {
-            'score': 70,
             'shelf_life': '3-4 days until peak ripeness',
             'action': 'Good for market - will ripen soon',
             'pricing': 'Standard price (₦12,000-₦15,000/basket)',
@@ -49,7 +141,6 @@ def get_freshness_details(class_name, confidence):
             'cooling_needed': False
         },
         'old': {
-            'score': 50,
             'shelf_life': '1-2 days maximum',
             'action': 'Sell immediately or move to cold storage',
             'pricing': 'Reduced price (₦8,000-₦10,000/basket)',
@@ -57,7 +148,6 @@ def get_freshness_details(class_name, confidence):
             'cooling_needed': True
         },
         'damaged': {
-            'score': 20,
             'shelf_life': 'Process today',
             'action': 'Not suitable for fresh sale - process into paste/sauce',
             'pricing': 'Processing price only (₦3,000-₦5,000/basket)',
@@ -66,23 +156,21 @@ def get_freshness_details(class_name, confidence):
         }
     }
     
-    # Default fallback if class not recognized
-    if class_name not in scoring_map:
-        return {
-            'score': 50,
-            'category': class_name.capitalize(),
-            'confidence': float(confidence),
-            'shelf_life': 'Unknown',
-            'action': 'Manual inspection recommended',
-            'pricing': 'Market rate varies',
-            'urgency': 'medium',
-            'cooling_needed': False
-        }
+    # Get details or use defaults
+    details = category_details.get(class_name, {
+        'shelf_life': 'Unknown',
+        'action': 'Manual inspection recommended',
+        'pricing': 'Market rate varies',
+        'urgency': 'medium',
+        'cooling_needed': False
+    })
     
-    details = scoring_map[class_name]
+    # Add confidence warning to action if confidence is low
+    if confidence < 0.70:
+        details['action'] = f"⚠️ Low confidence ({int(confidence*100)}%) - {details['action']} - Double-check visually"
     
     return {
-        'score': details['score'],
+        'score': final_score,
         'category': class_name.capitalize(),
         'confidence': float(confidence),
         'shelf_life': details['shelf_life'],
@@ -91,7 +179,6 @@ def get_freshness_details(class_name, confidence):
         'urgency': details['urgency'],
         'cooling_needed': details['cooling_needed']
     }
-
 
 @app.route('/health', methods=['GET'])
 def health():
