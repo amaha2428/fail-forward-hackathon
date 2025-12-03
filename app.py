@@ -124,6 +124,7 @@ def predict():
         index = np.argmax(prediction)
         class_name = class_names[index].strip()[2:]  # Remove index prefix
         confidence_score = prediction[0][index]
+        confidence_score = np.round(confidence_score * 100, 2)
 
         # Get detailed freshness information
         freshness_details = get_freshness_details(class_name, confidence_score)
